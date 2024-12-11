@@ -30,7 +30,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []  # Initialize messages as an empty list
 
 # Streamlit UI
-st.title("🧠 Reserch on Nigerian Politics")
+st.title("🧠 Reserch on Nigerian Politics and Economy")
 st.write("""
 Welcome to the Veegil Media Platform. Ask me any question related to political developments across Nigeria, and I'll try to assist you. 
 If I cannot find relevant information, I'll let you know. 
