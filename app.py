@@ -13,13 +13,13 @@ st.set_page_config(
 # Sidebar Section
 with st.sidebar:
     st.image("images/bot.png", use_container_width=True)
-    st.title("Nigerian Political Analyst")
+    st.title("Nigerian Politics and Economics Analyst")
     st.write(
         """
         Ask me questions about:
         - Political Development Across Nigeria.
-        - Leadership.
         - Government.
+        - Leadership and Economy.
 
         I'll answer concisely based on the information in my database. If the information isn't available, I'll let you know.
         """
