@@ -6,20 +6,20 @@ chatbot = ChatBot()
 
 # Set the page title
 st.set_page_config(
-    page_title="Mental Health Chatbot",
+    page_title="Veralog Analyst",
     layout="centered",
 )
 
 # Sidebar Section
 with st.sidebar:
     st.image("images/bot.png", use_container_width=True)
-    st.title("Mental Health Diagnosis Bot")
+    st.title("Nigerian Political Analyst")
     st.write(
         """
         Ask me questions about:
-        - Mental Health Disorders & diagnoses.
-        - DSM 5 classification.
-        - Therapeutic Techniques.
+        - Political Development Across Nigeria.
+        - Leadership.
+        - Government.
 
         I'll answer concisely based on the information in my database. If the information isn't available, I'll let you know.
         """
@@ -30,9 +30,9 @@ if "messages" not in st.session_state:
     st.session_state.messages = []  # Initialize messages as an empty list
 
 # Streamlit UI
-st.title("🧠 Mental Health Diagnosis Bot")
+st.title("🧠 Reserch on Nig. Politics")
 st.write("""
-Welcome to the Mental Health Assistant. Ask me any question related to mental health disorders, and I'll try to assist you. 
+Welcome to the Veegil Platform. Ask me any question related to ploitical developments, and I'll try to assist you. 
 If I cannot find relevant information, I'll let you know. 
 """)
 
@@ -52,7 +52,7 @@ def generate_response(user_input):
             elif "result" in result:
                 return result["result"].strip()  # If no **Question:** pattern, fallback to result key
             else:
-                return "I'm sorry. My response is currently limited to the content in my Database."
+                return "Please, be informed that my response is currently limited to the content in my Database."
         else:
             return "I'm sorry. My response is currently limited to the content in my Database."
     except Exception as e:
@@ -65,7 +65,7 @@ for message in st.session_state.messages:
         st.write(message["content"])
 
 # User-provided input via chat box
-if user_input := st.chat_input(placeholder="Ask me a question about mental health disorders:"):
+if user_input := st.chat_input(placeholder="Ask me a question about politics in Nigeria:"):
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.write(user_input)
