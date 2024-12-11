@@ -13,7 +13,7 @@ st.set_page_config(
 # Sidebar Section
 with st.sidebar:
     st.image("images/bot.png", use_container_width=True)
-    st.title("Nigerian Politics and Economics Analyst")
+    st.title("VeraLog \nNigerian Politics and Economics Analyst")
     st.write(
         """
         Ask me questions about:
