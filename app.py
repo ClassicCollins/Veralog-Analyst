@@ -30,9 +30,9 @@ if "messages" not in st.session_state:
     st.session_state.messages = []  # Initialize messages as an empty list
 
 # Streamlit UI
-st.title("🧠 Reserch on Nig. Politics")
+st.title("🧠 Reserch on Nigerian Politics")
 st.write("""
-Welcome to the Veegil Platform. Ask me any question related to ploitical developments, and I'll try to assist you. 
+Welcome to the Veegil Media Platform. Ask me any question related to political developments across Nigeria, and I'll try to assist you. 
 If I cannot find relevant information, I'll let you know. 
 """)
 
@@ -59,7 +59,7 @@ def generate_response(user_input):
         return f"Error: {e}"
 
 # Display chat history
-st.markdown("#### Chat with Bot:")
+st.markdown("#### Chat with VeraLog:")
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
