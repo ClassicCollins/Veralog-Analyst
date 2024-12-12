@@ -34,7 +34,7 @@ st.title("🗺️ Reserch on Nigerian Politics and Economy 📊")
 st.write("""
 Welcome to the Veegil Media Platform. A  place to get every political analysis in Nigerian well-detailed to you without any partisan bias. Please, ask queastions. 
 If I cannot find relevant information, I'll let you know. 
-\n [Fact Check Political Comemnts](https://media.veegil.com/)""")
+\n [Fact Check Political Comments](https://media.veegil.com/)""")
 
 
 
