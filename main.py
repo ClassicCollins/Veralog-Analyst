@@ -114,6 +114,6 @@ if __name__ == "__main__":
     chatbot = ChatBot()
 
     # Ask a sample question
-    question = "Tell me about Nigerian politics?"
+    question = "Hello, what can you help me with"
     answer = chatbot.ask_question(question)
     print(f"Answer: {answer}")
