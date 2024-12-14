@@ -45,7 +45,7 @@ class ChatBot:
             top_k=50,
             top_p=0.8,
             temperature=0.7,
-            max_new_tokens=200,
+            max_new_tokens=300,
             huggingfacehub_api_token=os.getenv("HUG_TOKEN_1")
         )
 
