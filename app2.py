@@ -1,15 +1,13 @@
 import streamlit as st
 from main import ChatBot
-from transformers import AutoTokenizer, AutoModel
+from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-import torch
 
 # Initialize ChatBot instance
 chatbot = ChatBot()
 
-# Load pre-trained model and tokenizer from Hugging Face
-tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/paraphrase-MiniLM-L6-v2")
-model = AutoModel.from_pretrained("sentence-transformers/paraphrase-MiniLM-L6-v2")
+# Load local pre-trained model from SentenceTransformers
+model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
 
 # Set the page title
 st.set_page_config(
@@ -40,12 +38,9 @@ if "messages" not in st.session_state:
 st.title("🗺️ Research on Nigerian Politics and Economy 📊")
 st.write("""Welcome to the Veegil Media Platform. A place to get every political analysis in Nigerian well-detailed to you without any partisan bias. Please, ask questions. If I cannot find relevant information, I'll let you know.""")
 
-# Function to calculate embeddings using the pre-trained model
+# Function to calculate embeddings using the local pre-trained model
 def get_embeddings(text_list):
-    inputs = tokenizer(text_list, padding=True, truncation=True, return_tensors="pt")
-    with torch.no_grad():
-        outputs = model(**inputs)
-    embeddings = outputs.last_hidden_state.mean(dim=1)
+    embeddings = model.encode(text_list)
     return embeddings
 
 # Function to calculate cosine similarity between two text embeddings
@@ -108,7 +103,7 @@ if user_input := st.chat_input(placeholder="Ask me a question about politics in 
                 # Generate response
                 response = generate_response(user_input)
 
-                # Calculate similarity score using the pre-trained model
+                # Calculate similarity score using the local pre-trained model
                 similarity_score = calculate_similarity(user_input, response)
 
                 # Get the verification status based on the similarity score
