@@ -97,13 +97,13 @@ if user_input := st.chat_input(placeholder="Ask me a question about politics in 
             with st.spinner("Fetching insights..."):
                 # Generate response
                 response = generate_response(user_input)
-                
+
                 # Calculate similarity score using the embeddings model
                 similarity_score = calculate_similarity(user_input, response, chatbot.llm.embeddings_model)
-                
+
                 # Get the verification status based on the similarity score
                 verification_status = get_verification_status(similarity_score)
-                
+
                 # Display the response and verification status
                 st.write(response)
                 st.write(f"Fact Index: {round(similarity_score * 100, 2)}%")
