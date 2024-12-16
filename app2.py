@@ -1,10 +1,15 @@
 import streamlit as st
 from main import ChatBot
+from transformers import AutoTokenizer, AutoModel
 from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
+import torch
 
 # Initialize ChatBot instance
 chatbot = ChatBot()
+
+# Load pre-trained model and tokenizer from Hugging Face
+tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/paraphrase-MiniLM-L6-v2")
+model = AutoModel.from_pretrained("sentence-transformers/paraphrase-MiniLM-L6-v2")
 
 # Set the page title
 st.set_page_config(
@@ -35,13 +40,18 @@ if "messages" not in st.session_state:
 st.title("🗺️ Research on Nigerian Politics and Economy 📊")
 st.write("""Welcome to the Veegil Media Platform. A place to get every political analysis in Nigerian well-detailed to you without any partisan bias. Please, ask questions. If I cannot find relevant information, I'll let you know.""")
 
-# Function to calculate cosine similarity between two text embeddings
-def calculate_similarity(query, response, embeddings_model):
-    # Generate embeddings for the query and response
-    query_embedding = embeddings_model.encode([query])
-    response_embedding = embeddings_model.encode([response])
+# Function to calculate embeddings using the pre-trained model
+def get_embeddings(text_list):
+    inputs = tokenizer(text_list, padding=True, truncation=True, return_tensors="pt")
+    with torch.no_grad():
+        outputs = model(**inputs)
+    embeddings = outputs.last_hidden_state.mean(dim=1)
+    return embeddings
 
-    # Calculate cosine similarity
+# Function to calculate cosine similarity between two text embeddings
+def calculate_similarity(query, response):
+    query_embedding = get_embeddings([query])
+    response_embedding = get_embeddings([response])
     similarity_score = cosine_similarity(query_embedding, response_embedding)[0][0]
     return similarity_score
 
@@ -98,8 +108,8 @@ if user_input := st.chat_input(placeholder="Ask me a question about politics in 
                 # Generate response
                 response = generate_response(user_input)
 
-                # Calculate similarity score using the embeddings model
-                similarity_score = calculate_similarity(user_input, response, chatbot.llm.embeddings_model)
+                # Calculate similarity score using the pre-trained model
+                similarity_score = calculate_similarity(user_input, response)
 
                 # Get the verification status based on the similarity score
                 verification_status = get_verification_status(similarity_score)
