@@ -36,7 +36,7 @@ if "messages" not in st.session_state:
 
 # Streamlit UI
 st.title("🗺️ Research on Nigerian Politics and Economy 📊")
-st.write("""Welcome to the Veegil Media Platform. A place to get every political analysis in Nigerian well-detailed to you without any partisan bias. Please, ask questions. If I cannot find relevant information, I'll let you know.""")
+st.write("""Welcome to the Veegil Media Platform. A place to get every political analysis in Nigerian well-detailed to you without any partisan bias. Please, verify posts with VeraLog. If I cannot find relevant information, I'll let you know.I verify based on what I have in my database""")
 
 # Function to calculate embeddings using the local pre-trained model
 def get_embeddings(text_list):
@@ -52,11 +52,11 @@ def calculate_similarity(query, response):
 
 # Function to categorize the similarity score
 def get_verification_status(similarity_score):
-    if similarity_score > 0.9:
+    if similarity_score > 0.7:
         return "Verified"
-    elif 0.5 <= similarity_score <= 0.9:
+    elif 0.4 <= similarity_score <= 0.7:
         return "Partly Verified"
-    elif similarity_score < 0.5:
+    elif similarity_score < 0.4:
         return "Not Verified"
     else:
         return "Cannot substantiate this post at this time, check back later."
@@ -85,13 +85,13 @@ def generate_response(user_input):
         return f"Error: {e}"
 
 # Display chat history
-st.markdown("#### Chat with VeraLog:")
+st.markdown("#### Verify Post with VeraLog:")
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
 # User-provided input via chat box
-if user_input := st.chat_input(placeholder="Ask me a question about politics in Nigeria:"):
+if user_input := st.chat_input(placeholder="Verify posts on politics, Leadership and economy in Nigeria:"):
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.write(user_input)
@@ -111,7 +111,7 @@ if user_input := st.chat_input(placeholder="Ask me a question about politics in 
 
                 # Display the response and verification status
                 st.write(response)
-                st.write(f"Fact Index: {round(similarity_score * 100, 2)}%")
+                st.write(f"Context Fact Index: {round(similarity_score * 100, 2)}%")
                 st.write(f"Verification Status: {verification_status}")
 
         # Store the assistant's response
