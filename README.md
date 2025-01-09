@@ -33,7 +33,7 @@ cd veralog
 ```
 start the application by running the following command:
 ```bash
-streamlit run app.py
+streamlit run app2.py
 ```
 
 The application will start and will be accessible in your browser at http://localhost:8501
