@@ -49,7 +49,7 @@ The possible verification statuses are:
 - `Cannot substantiate this post at this time:` If the model cannot provide relevant information.
 ### Example Workflow:
 - The user enters a post or query about Nigerian politics or economy.
-- The chatbot retrieves a response based on its trained database.
+- The chatbot retrieves a response based on its [trained database](https://github.com/ClassicCollins/Veralog-Analyst/blob/classic/document/Veegil_Post.pdf).
 - The system calculates the similarity score between the query and the response.
 - The verification status is displayed based on the calculated similarity score.
 - Users receive insights with a Context Fact Index showing the relevance of the response.
