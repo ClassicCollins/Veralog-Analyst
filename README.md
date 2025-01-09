@@ -27,7 +27,7 @@ pip install -r requirements.txt
 Clone this repository to your local machine:
 
 ```bash
-git clone https://gitlab.com/your-repository/veralog.git
+git clone https://github.com/ClassicCollins/Veralog-Analyst.git
 
 cd veralog
 ```
