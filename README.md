@@ -43,10 +43,10 @@ The application uses Streamlit to provide an interactive web interface where use
 The ChatBot is invoked to retrieve responses, which are then compared to the user input using SentenceTransformers to generate embeddings.
 Cosine Similarity is used to calculate how close the response is to the user input, and based on the similarity score, a Verification Status is provided.
 The possible verification statuses are:
-`Verified:` When the similarity score is above 0.7.
-`Partly Verified:` When the similarity score is between 0.4 and 0.7.
-`Not Verified:` When the similarity score is below 0.4.
-`Cannot substantiate this post at this time:` If the model cannot provide relevant information.
+- `Verified:` When the similarity score is above 0.7.
+- `Partly Verified:` When the similarity score is between 0.4 and 0.7.
+- `Not Verified:` When the similarity score is below 0.4.
+- `Cannot substantiate this post at this time:` If the model cannot provide relevant information.
 ### Example Workflow:
 - The user enters a post or query about Nigerian politics or economy.
 - The chatbot retrieves a response based on its trained database.
