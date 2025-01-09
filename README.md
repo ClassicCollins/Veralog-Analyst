@@ -1,6 +1,6 @@
 # VeraLog - Nigeria's Economic and Political Fact-Checker
 
-VeraLog is an AI-powered platform that helps verify posts related to political and economic developments in Nigeria. Powered by **Streamlit**, **Sentence Transformers**, and **Sklearn**, VeraLog can compare user queries with a pre-trained chatbot model and assess the accuracy of posts by calculating similarity scores and providing a verification status.
+[VeraLog](https://veralog-analyst2.streamlit.app/) is an AI-powered platform that helps verify posts related to political and economic developments in Nigeria. Powered by **Streamlit**, **Sentence Transformers**, and **Sklearn**, VeraLog can compare user queries with a pre-trained chatbot model and assess the accuracy of posts by calculating similarity scores and providing a verification status.
 
 ## Features
 
