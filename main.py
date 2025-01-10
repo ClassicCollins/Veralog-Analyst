@@ -42,10 +42,10 @@ class ChatBot:
         repo_id = "mistralai/Mixtral-8x7B-Instruct-v0.1"
         self.llm = HuggingFaceEndpoint(
             repo_id=repo_id,
-            top_k=50,
+            top_k=20,
             top_p=0.8,
-            temperature=0.7,
-            max_new_tokens=300,
+            temperature=0.5,
+            max_new_tokens=150,
             huggingfacehub_api_token=os.getenv("HUG_TOKEN_1")
         )
 
