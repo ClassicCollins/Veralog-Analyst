@@ -43,8 +43,8 @@ class ChatBot:
         self.llm = HuggingFaceEndpoint(
             repo_id=repo_id,
             top_k=40,
-            top_p=0.8,
-            temperature=0.6,
+            top_p=0.7,
+            temperature=0.5,
             max_new_tokens=150,
             huggingfacehub_api_token=os.getenv("HUG_TOKEN_1")
         )
