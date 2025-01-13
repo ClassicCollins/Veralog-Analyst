@@ -62,7 +62,7 @@ def get_verification_status(similarity_score):
         return "Cannot substantiate this post at this time, check back later."
 
 # Streamlit interaction with the user
-@st.cache_data
+#@st.cache_data
 def generate_response(user_input):
     try:
         # Retrieve the response using the chatbot QA chain
