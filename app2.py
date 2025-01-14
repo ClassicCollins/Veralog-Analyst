@@ -56,8 +56,8 @@ def get_verification_status(similarity_score):
         return "Verified"
     elif 0.4 <= similarity_score <= 0.7:
         return "Partly Verified"
-    elif similarity_score < 0.4:
-        return "Not Verified"
+    elif 0.2 <= similarity_score < 0.4:
+        return "Not Verified based on information in my Database"
     else:
         return "Cannot substantiate this post at this time, check back later."
 
