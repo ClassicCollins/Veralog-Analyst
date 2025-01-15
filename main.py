@@ -1,16 +1,12 @@
 import os
 import pinecone
-from dotenv import load_dotenv 
-from langchain.vectorstores import Pinecone
-from langchain.vectorstores import Pinecone as LangchainPinecone
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.llms import HuggingFaceEndpoint
+from dotenv import load_dotenv
+from langchain_community.vectorstores import Pinecone  # Updated import for Pinecone
+from langchain_community.embeddings import HuggingFaceEmbeddings  # Updated import for HuggingFaceEmbeddings
+from langchain_community.llms import HuggingFaceEndpoint  # Updated import for HuggingFaceEndpoint
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
-from langchain_community.vectorstores import Pinecone as LangchainPinecone
-from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.chains.question_answering import load_qa_chain
-from langchain.llms import HuggingFaceEndpoint
 
 
 # Load environment variables
@@ -41,7 +37,6 @@ class ChatBot:
         # Initialize HuggingFaceEndpoint LLM
         repo_id = "mistralai/Mixtral-8x7B-Instruct-v0.1"
         self.llm = HuggingFaceEndpoint(
-            timeout=400,
             repo_id=repo_id,
             top_k=40,
             top_p=0.8,
