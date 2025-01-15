@@ -40,7 +40,6 @@ class ChatBot:
         # Initialize HuggingFaceEndpoint LLM
         repo_id = "mistralai/Mixtral-8x7B-Instruct-v0.1"
         self.llm = HuggingFaceEndpoint(
-            timeout=400,
             repo_id=repo_id,
             top_k=40,
             top_p=0.8,
