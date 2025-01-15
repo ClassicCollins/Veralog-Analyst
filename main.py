@@ -7,6 +7,9 @@ from langchain_community.llms import HuggingFaceEndpoint  # Updated import for H
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 from langchain.chains.question_answering import load_qa_chain
+from langchain_huggingface import HuggingFaceEmbeddings  # Updated import for HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEndpoint  # Updated import for HuggingFaceEndpoint
+
 
 
 # Load environment variables
