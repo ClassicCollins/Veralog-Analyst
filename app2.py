@@ -35,7 +35,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []  # Initialize messages as an empty list
 
 # Streamlit UI
-st.title("🗺️ Fact Check Posts on Nigerian Politics and Economy 📊")
+st.title("🗺️ Fact Check Posts on Nigerian Politics and Economy 📊verify☑️")
 st.write("""Welcome to the Veegil Media Platform. A place to get every political analysis in Nigerian well-detailed to you without any partisan bias. Please, verify posts with VeraLog. If I cannot find relevant information, I'll let you know.I verify based on what I have in my database""")
 
 # Function to calculate embeddings using the local pre-trained model
