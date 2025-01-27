@@ -34,6 +34,10 @@ with st.sidebar:
 if "messages" not in st.session_state:
     st.session_state.messages = []  # Initialize messages as an empty list
 
+# Initialize session state for response
+if "response" not in st.session_state:
+    st.session_state.response = None  # Initialize response as None
+
 # Streamlit UI
 st.title("🗺️ Fact Check Posts on Nigerian Politics and Economy 📊verify☑️")
 st.write("""Welcome to the Veegil Media Platform. A place to get every political analysis in Nigerian well-detailed to you without any partisan bias. Please, verify posts with VeraLog. If I cannot find relevant information, I'll let you know.I verify based on what I have in my database""")
@@ -99,18 +103,21 @@ if user_input := st.chat_input(placeholder="Verify posts on politics, Leadership
     if st.button("Generate Response"):
         with st.chat_message("assistant"):
             with st.spinner("Fetching insights..."):
-                response = generate_response(user_input)
-                st.session_state.messages.append({"role": "assistant", "content": response})
-                st.write(response)
-    
+                st.session_state.response = generate_response(user_input)  # Store the response in session state
+                st.session_state.messages.append({"role": "assistant", "content": st.session_state.response})
+                st.write(st.session_state.response)  # Display the response
+
     if st.button("Calculate Fact Index"):
-        if 'response' in locals():  # Ensure the response exists before calculating similarity
-            similarity_score = calculate_similarity(user_input, response)
+        if st.session_state.response:  # Ensure the response exists before calculating similarity
+            similarity_score = calculate_similarity(user_input, st.session_state.response)
             st.write(f"Context Fact Index: {round(similarity_score * 100, 2)}%")
-    
+        else:
+            st.warning("Please generate a response first.")
+
     if st.button("Get Verification Status"):
-        if 'response' in locals():  # Ensure the response exists before calculating verification status
-            similarity_score = calculate_similarity(user_input, response)
+        if st.session_state.response:  # Ensure the response exists before calculating verification status
+            similarity_score = calculate_similarity(user_input, st.session_state.response)
             verification_status = get_verification_status(similarity_score)
             st.write(f"Verification Status: {verification_status}")
-
+        else:
+            st.warning("Please generate a response first.")
