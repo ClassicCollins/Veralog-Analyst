@@ -149,39 +149,36 @@ if user_input := st.chat_input(placeholder="Verify posts on politics, Leadership
                 # Calculate source credibility score
                 credibility_score = calculate_credibility_score(relevant_articles)
 
-                # Display the response, related articles, verification status, and credibility score
-                st.write("**Generated Response:**")
-                st.write(response)
-                st.write(f"**Context Fact Index:** {round(similarity_score * 100, 2)}%")
-                st.write(f"**Verification Status:** {verification_status}")
+                # Store the response and details in session state for later use
+                st.session_state.generated_response = response
+                st.session_state.similarity_score = similarity_score
+                st.session_state.verification_status = verification_status
+                st.session_state.relevant_articles = relevant_articles
+                st.session_state.credibility_score = credibility_score
 
-                st.write("**Related Articles:**")
-                for article in relevant_articles:
-                    st.write(f"- **{article['source']}**: [{article['title']}]({article['url']})")
-
-                st.write(f"**Source Credibility Score:** {credibility_score}/3 (Higher score indicates more corroboration)")
-
-        # Store the assistant's response
-        st.session_state.messages.append({"role": "assistant", "content": response})
-
-# Buttons for Fact Index and Get Verification
-if st.button("Fact Index"):
-    if user_input:
-        with st.spinner("Calculating similarity..."):
-            # Fetch the response and calculate similarity
-            response = generate_response(user_input)
-            similarity_score = calculate_similarity(user_input, response)
-            st.write(f"Similarity Score (Context Fact Index): {round(similarity_score * 100, 2)}%")
+# Add buttons to display various information
+if st.button("Context Fact Index"):
+    if 'similarity_score' in st.session_state:
+        st.write(f"**Context Fact Index:** {round(st.session_state.similarity_score * 100, 2)}%")
     else:
-        st.warning("Please enter a query first.")
+        st.warning("Please generate a response first.")
 
-if st.button("Get Verification"):
-    if user_input:
-        with st.spinner("Verifying response..."):
-            # Fetch the response and calculate similarity score
-            response = generate_response(user_input)
-            similarity_score = calculate_similarity(user_input, response)
-            verification_status = get_verification_status(similarity_score)
-            st.write(f"Verification Status: {verification_status}")
+if st.button("Verification Status"):
+    if 'verification_status' in st.session_state:
+        st.write(f"**Verification Status:** {st.session_state.verification_status}")
     else:
-        st.warning("Please enter a query first.")
+        st.warning("Please generate a response first.")
+
+if st.button("Related Articles"):
+    if 'relevant_articles' in st.session_state and st.session_state.relevant_articles:
+        st.write("**Related Articles:**")
+        for article in st.session_state.relevant_articles:
+            st.write(f"- **{article['source']}**: [{article['title']}]({article['url']})")
+    else:
+        st.warning("No related articles found. Please try again later.")
+
+if st.button("Source Credibility Score"):
+    if 'credibility_score' in st.session_state:
+        st.write(f"**Source Credibility Score:** {st.session_state.credibility_score}/3 (Higher score indicates more corroboration)")
+    else:
+        st.warning("Please generate a response first.")
