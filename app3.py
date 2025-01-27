@@ -54,24 +54,18 @@ def calculate_similarity(query, response):
     similarity_score = cosine_similarity(query_embedding, response_embedding)[0][0]
     return similarity_score
 
-# Function to categorize the similarity score
-def get_verification_status(similarity_score):
-    if similarity_score > 0.7:
-        return "Verified"
-    elif 0.4 <= similarity_score <= 0.7:
-        return "Partly Verified"
-    elif 0.2 <= similarity_score < 0.4:
-        return "Not Verified based on information in my Database"
-    else:
-        return "Cannot substantiate this post at this time, check back later."
-
 # Streamlit interaction with the user
 def generate_response(user_input):
     try:
         # Retrieve the response using the chatbot QA chain
+        st.write("Calling chatbot's QA chain...")  # Debugging message
         result = chatbot.qa_chain.invoke(user_input)
+        
+        # Output the raw result for debugging
+        st.write(f"Raw result from chatbot: {result}")  # Debugging: Check what the result is
+
         if result:
-            # Split by '**Question:**' and focus on the answer to the user's question
+            # If result has valid structure, process it
             if "**Question:**" in result:
                 sections = result.split("**Question:**")
                 for section in sections:
@@ -85,6 +79,7 @@ def generate_response(user_input):
         else:
             return "I'm sorry. My response is currently limited to the content in my Database."
     except Exception as e:
+        st.write(f"Error: {e}")
         return f"Error: {e}"
 
 # Display chat history
@@ -107,7 +102,7 @@ if user_input := st.chat_input(placeholder="Verify posts on politics, Leadership
                     # Attempt to generate the response
                     st.session_state.response = generate_response(user_input)  # Store the response in session state
                     
-                    # Debugging: Output the raw result
+                    # Check if the response is valid
                     if st.session_state.response:
                         st.session_state.messages.append({"role": "assistant", "content": st.session_state.response})
                         st.write(st.session_state.response)  # Display the response
@@ -115,18 +110,4 @@ if user_input := st.chat_input(placeholder="Verify posts on politics, Leadership
                         st.write("No response generated. Please check the input or chatbot settings.")
                 except Exception as e:
                     st.write(f"Error while generating response: {e}")
-
-    if st.button("Calculate Fact Index"):
-        if st.session_state.response:  # Ensure the response exists before calculating similarity
-            similarity_score = calculate_similarity(user_input, st.session_state.response)
-            st.write(f"Context Fact Index: {round(similarity_score * 100, 2)}%")
-        else:
-            st.warning("Please generate a response first.")
-
-    if st.button("Get Verification Status"):
-        if st.session_state.response:  # Ensure the response exists before calculating verification status
-            similarity_score = calculate_similarity(user_input, st.session_state.response)
-            verification_status = get_verification_status(similarity_score)
-            st.write(f"Verification Status: {verification_status}")
-        else:
-            st.warning("Please generate a response first.")
+                    st.write(f"Error: {e}")
