@@ -1,19 +1,25 @@
-import streamlit as st
+# Test script to inspect chatbot and qa_chain
+from main import ChatBot
 
-# Simple mock function for testing
-def simple_response(user_input):
-    if user_input:
-        return f"Response to: {user_input}"
-    return "No input provided."
+# Initialize the ChatBot instance
+chatbot = ChatBot()
 
-# Streamlit interaction with the user
-st.title("🗺️ Fact Check Posts on Nigerian Politics and Economy 📊verify☑️")
+# Test if qa_chain is initialized correctly
+def test_chatbot():
+    try:
+        # Inspect the qa_chain object
+        print("Inspecting qa_chain:", chatbot.qa_chain)
+        
+        # Test invoking qa_chain with sample input
+        user_input = "What is the current state of the Nigerian economy?"
+        print("User input:", user_input)
 
-# User-provided input via chat box
-if user_input := st.chat_input(placeholder="Ask about Nigerian politics, leadership, or economy:"):
-    st.write(f"You asked: {user_input}")
+        # Test if qa_chain.invoke() produces output
+        result = chatbot.qa_chain.invoke(user_input)
+        print("Result from qa_chain.invoke():", result)
 
-    # Button to generate response
-    if st.button("Generate Simple Response"):
-        response = simple_response(user_input)
-        st.write(response)
+    except Exception as e:
+        print(f"Error: {e}")
+
+# Run the test
+test_chatbot()
