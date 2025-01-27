@@ -139,24 +139,24 @@ if user_input := st.chat_input(placeholder="Verify posts on politics, Leadership
         # Store the assistant's response
         st.session_state.messages.append({"role": "assistant", "content": response})
 
-# Buttons for Fact Index and Get Verification
-if st.button("Fact Index"):
-    if user_input:
-        with st.spinner("Calculating similarity..."):
-            # Fetch the response and calculate similarity
-            response = generate_response(user_input)
-            similarity_score = calculate_similarity(user_input, response)
-            st.write(f"Similarity Score (Context Fact Index): {round(similarity_score * 100, 2)}%")
-    else:
-        st.warning("Please enter a query first.")
-
-if st.button("Get Verification"):
-    if user_input:
-        with st.spinner("Verifying response..."):
-            # Fetch the response and calculate similarity score
-            response = generate_response(user_input)
-            similarity_score = calculate_similarity(user_input, response)
-            verification_status = get_verification_status(similarity_score)
-            st.write(f"Verification Status: {verification_status}")
-    else:
-        st.warning("Please enter a query first.")
+    # Buttons for Fact Index and Get Verification
+    if st.button("Fact Index"):
+        if user_input:
+            with st.spinner("Calculating similarity..."):
+                # Fetch the response and calculate similarity
+                response = generate_response(user_input)
+                similarity_score = calculate_similarity(user_input, response)
+                st.write(f"Similarity Score (Context Fact Index): {round(similarity_score * 100, 2)}%")
+        else:
+            st.warning("Please enter a query first.")
+    
+    if st.button("Get Verification"):
+        if user_input:
+            with st.spinner("Verifying response..."):
+                # Fetch the response and calculate similarity score
+                response = generate_response(user_input)
+                similarity_score = calculate_similarity(user_input, response)
+                verification_status = get_verification_status(similarity_score)
+                st.write(f"Verification Status: {verification_status}")
+        else:
+            st.warning("Please enter a query first.")
