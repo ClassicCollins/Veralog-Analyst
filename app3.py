@@ -103,9 +103,18 @@ if user_input := st.chat_input(placeholder="Verify posts on politics, Leadership
     if st.button("Generate Response"):
         with st.chat_message("assistant"):
             with st.spinner("Fetching insights..."):
-                st.session_state.response = generate_response(user_input)  # Store the response in session state
-                st.session_state.messages.append({"role": "assistant", "content": st.session_state.response})
-                st.write(st.session_state.response)  # Display the response
+                try:
+                    # Attempt to generate the response
+                    st.session_state.response = generate_response(user_input)  # Store the response in session state
+                    
+                    # Debugging: Output the raw result
+                    if st.session_state.response:
+                        st.session_state.messages.append({"role": "assistant", "content": st.session_state.response})
+                        st.write(st.session_state.response)  # Display the response
+                    else:
+                        st.write("No response generated. Please check the input or chatbot settings.")
+                except Exception as e:
+                    st.write(f"Error while generating response: {e}")
 
     if st.button("Calculate Fact Index"):
         if st.session_state.response:  # Ensure the response exists before calculating similarity
