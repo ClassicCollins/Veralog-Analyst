@@ -130,10 +130,10 @@ if user_input := st.chat_input(placeholder="Verify posts on politics, Leadership
     with st.chat_message("user"):
         st.write(user_input)
 
-    # Generate a new response if the last message is not from the assistant
-    if st.session_state.messages[-1]["role"] != "assistant":
+    # Display the "Generate Response" button
+    if st.button("Generate Response"):
         with st.chat_message("assistant"):
-            with st.spinner("Fetching insights..."):
+            with st.spinner("Generating response..."):
                 # Generate response
                 response = generate_response(user_input)
 
