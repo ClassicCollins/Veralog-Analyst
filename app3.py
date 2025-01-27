@@ -1,4 +1,6 @@
 import streamlit as st
+import requests
+from bs4 import BeautifulSoup
 from main import ChatBot
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -61,20 +63,38 @@ def get_verification_status(similarity_score):
     else:
         return "Cannot substantiate this post at this time, check back later."
 
-# Function to fetch related facts based on the query
-def fetch_related_facts(query):
-    facts = {
-        "food security": "Food security is a major concern in Nigeria, with efforts to improve agricultural production.",
-        "agriculture": "Agriculture is a vital part of Nigeria's economy, contributing significantly to GDP and employment.",
-        "economic growth": "Nigeria's economic growth has been driven by both agriculture and manufacturing, but challenges remain."
-    }
-    related_facts = []
-    for key, fact in facts.items():
-        if key.lower() in query.lower():
-            related_facts.append(fact)
-    if not related_facts:
-        related_facts.append("No specific facts found for the query. Please try with another question.")
-    return related_facts
+# Function to fetch articles from trusted news sources
+def fetch_articles_from_sources(query):
+    sources = [
+        {"name": "Punch", "url": "https://punchng.com/"},
+        {"name": "Guardian", "url": "https://guardian.ng/"},
+        {"name": "Vanguard", "url": "https://www.vanguardngr.com/"}
+    ]
+    
+    relevant_articles = []
+    for source in sources:
+        try:
+            response = requests.get(source["url"])
+            soup = BeautifulSoup(response.content, 'html.parser')
+            # Look for all links or news articles related to the query
+            articles = soup.find_all('a', href=True)
+            for article in articles:
+                if query.lower() in article.get_text().lower():
+                    relevant_articles.append({
+                        "source": source["name"],
+                        "title": article.get_text(),
+                        "url": article['href']
+                    })
+        except Exception as e:
+            print(f"Error fetching from {source['name']}: {e}")
+    
+    return relevant_articles
+
+# Function to calculate source credibility
+def calculate_credibility_score(relevant_articles):
+    # The more relevant articles, the higher the credibility
+    unique_sources = set(article["source"] for article in relevant_articles)
+    return len(unique_sources)
 
 # Function to generate the chatbot response
 def generate_response(user_input):
@@ -117,8 +137,8 @@ if user_input := st.chat_input(placeholder="Verify posts on politics, Leadership
                 # Generate response
                 response = generate_response(user_input)
 
-                # Fetch related facts based on the query
-                related_facts = fetch_related_facts(user_input)
+                # Fetch related articles based on the query
+                relevant_articles = fetch_articles_from_sources(user_input)
 
                 # Calculate similarity score using the local pre-trained model
                 similarity_score = calculate_similarity(user_input, response)
@@ -126,37 +146,42 @@ if user_input := st.chat_input(placeholder="Verify posts on politics, Leadership
                 # Get the verification status based on the similarity score
                 verification_status = get_verification_status(similarity_score)
 
-                # Display the response, related facts, and verification status
+                # Calculate source credibility score
+                credibility_score = calculate_credibility_score(relevant_articles)
+
+                # Display the response, related articles, verification status, and credibility score
                 st.write("**Generated Response:**")
                 st.write(response)
                 st.write(f"**Context Fact Index:** {round(similarity_score * 100, 2)}%")
                 st.write(f"**Verification Status:** {verification_status}")
 
-                st.write("**Related Facts:**")
-                for fact in related_facts:
-                    st.write(f"- {fact}")
+                st.write("**Related Articles:**")
+                for article in relevant_articles:
+                    st.write(f"- **{article['source']}**: [{article['title']}]({article['url']})")
+
+                st.write(f"**Source Credibility Score:** {credibility_score}/3 (Higher score indicates more corroboration)")
 
         # Store the assistant's response
         st.session_state.messages.append({"role": "assistant", "content": response})
 
-    # Buttons for Fact Index and Get Verification
-    if st.button("Fact Index"):
-        if user_input:
-            with st.spinner("Calculating similarity..."):
-                # Fetch the response and calculate similarity
-                response = generate_response(user_input)
-                similarity_score = calculate_similarity(user_input, response)
-                st.write(f"Similarity Score (Context Fact Index): {round(similarity_score * 100, 2)}%")
-        else:
-            st.warning("Please enter a query first.")
-    
-    if st.button("Get Verification"):
-        if user_input:
-            with st.spinner("Verifying response..."):
-                # Fetch the response and calculate similarity score
-                response = generate_response(user_input)
-                similarity_score = calculate_similarity(user_input, response)
-                verification_status = get_verification_status(similarity_score)
-                st.write(f"Verification Status: {verification_status}")
-        else:
-            st.warning("Please enter a query first.")
+# Buttons for Fact Index and Get Verification
+if st.button("Fact Index"):
+    if user_input:
+        with st.spinner("Calculating similarity..."):
+            # Fetch the response and calculate similarity
+            response = generate_response(user_input)
+            similarity_score = calculate_similarity(user_input, response)
+            st.write(f"Similarity Score (Context Fact Index): {round(similarity_score * 100, 2)}%")
+    else:
+        st.warning("Please enter a query first.")
+
+if st.button("Get Verification"):
+    if user_input:
+        with st.spinner("Verifying response..."):
+            # Fetch the response and calculate similarity score
+            response = generate_response(user_input)
+            similarity_score = calculate_similarity(user_input, response)
+            verification_status = get_verification_status(similarity_score)
+            st.write(f"Verification Status: {verification_status}")
+    else:
+        st.warning("Please enter a query first.")
