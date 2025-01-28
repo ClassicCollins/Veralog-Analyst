@@ -4,12 +4,16 @@ from bs4 import BeautifulSoup
 from main import ChatBot
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+from transformers import pipeline  # Added for sentiment analysis
 
 # Initialize ChatBot instance
 chatbot = ChatBot()
 
 # Load local pre-trained model from SentenceTransformers
 model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
+
+# Initialize sentiment analysis model
+sentiment_analyzer = pipeline("sentiment-analysis")
 
 # Set the page title
 st.set_page_config(
@@ -118,6 +122,13 @@ def generate_response(user_input):
     except Exception as e:
         return f"Error: {e}"
 
+# Function for sentiment analysis
+def analyze_sentiment(text):
+    result = sentiment_analyzer(text)
+    sentiment = result[0]['label']
+    score = result[0]['score']
+    return sentiment, score
+
 # Display chat history
 st.markdown("#### Verify Post with VeraLog:")
 for message in st.session_state.messages:
@@ -182,3 +193,12 @@ if st.button("Source Credibility Score"):
         st.write(f"**Source Credibility Score:** {st.session_state.credibility_score}/3 (Higher score indicates more corroboration)")
     else:
         st.warning("Please generate a response first.")
+
+# Add a button for sentiment analysis
+if st.button("Analyze Sentiment"):
+    if user_input:
+        sentiment, score = analyze_sentiment(user_input)
+        st.write(f"**Sentiment:** {sentiment}")
+        st.write(f"**Sentiment Score:** {score:.2f}")
+    else:
+        st.warning("Please enter some text to analyze sentiment.")
