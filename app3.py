@@ -196,7 +196,8 @@ if st.button("Source Credibility Score"):
 
 # Add a button for sentiment analysis
 if st.button("Analyze Sentiment"):
-    if user_input:
+    if 'messages' in st.session_state and st.session_state.messages:
+        user_input = st.session_state.messages[-1]["content"]  # Get the latest user input
         sentiment, score = analyze_sentiment(user_input)
         st.write(f"**Sentiment:** {sentiment}")
         st.write(f"**Sentiment Score:** {score:.2f}")
