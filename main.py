@@ -52,18 +52,18 @@ class ChatBot:
 
         # Define prompt template
         template = """
-        You are a political scholar who adheres strictly to factual information from reliable sources. Humans will submit posts related to Politics, Economy, Leadership, and Government in Nigeria.
-        Your task is to assess and confirm whether their post is TRUE or FALSE based solely on the provided context. You must respond accurately and with respect.
+        You are a political scholar who adheres strictly to factual information from reliable sources. Humans will submit post related to Politics, Economy, Leadership, and Government in Nigeria.
+        Your task is to assess and confirm whether their post is VERIFIED or UNVERIFIED based solely on the provided context. You must respond accurately and with respect.
         If the provided context does not contain sufficient information to verify the post, reply with: "Please be informed I am limited to the content in my database. Kindly check back for an update."
         Remember, you are required to communicate exclusively in English at all times.
         
         Context: {context}
 
-        **Question:** {question}
+        **Question:** {post}
 
         Answer:
         """
-        prompt = PromptTemplate(template=template, input_variables=["context", "question"])
+        prompt = PromptTemplate(template=template, input_variables=["context", "post"])
 
         # Set up the RetrievalQA chain
         self.qa_chain = RetrievalQA.from_chain_type(
@@ -72,13 +72,13 @@ class ChatBot:
             chain_type_kwargs={"prompt": prompt}
         )
 
-    def retrieve_context(self, question):
+    def retrieve_context(self, post):
         """
         Custom retrieval logic: Only extract page content safely without metadata dependencies.
         """
         try:
             # Use retriever to fetch relevant documents
-            retriever_results = self.retriever.get_relevant_documents(question)
+            retriever_results = self.retriever.get_relevant_documents(post)
 
             # Only focus on 'page_content' directly
             context_text = " ".join([result.page_content for result in retriever_results])
@@ -92,14 +92,14 @@ class ChatBot:
             print(f"Retrieval Error: {e}")
             return "I'm sorry. My response is currently limited to the content in my Database."
 
-    def ask_question(self, question):
+    def ask_question(self, post):
         """
         Safe invocation of the RetrievalQA chain while passing safe and filtered context data.
         """
         try:
             # Fetch context safely without metadata assumptions
-            context = self.retrieve_context(question)
-            response = self.qa_chain.run({"context": context, "query": question})
+            context = self.retrieve_context(post)
+            response = self.qa_chain.run({"context": context, "query": post})
             return response
         except Exception as e:
             print(f"Error during question handling: {e}")
@@ -111,6 +111,6 @@ if __name__ == "__main__":
     chatbot = ChatBot()
 
     # Ask a sample question
-    question = "Hello, what can you help me with"
-    answer = chatbot.ask_question(question)
+    post = "Veegil Media is based in Nigeria a non-partisan organization" #"Hello, what can you help me with"
+    answer = chatbot.ask_question(post)
     print(f"Answer: {answer}")
