@@ -182,12 +182,6 @@ if st.button("Context Fact Index"):
     else:
         st.warning("Please generate a response first.")
 
-if st.button("Verification Status"):
-    if 'verification_status' in st.session_state:
-        st.write(f"**Verification Status:** {st.session_state.verification_status}")
-    else:
-        st.warning("Please generate a response first.")
-
 if st.button("Related Articles"):
     if 'relevant_articles' in st.session_state and st.session_state.relevant_articles:
         st.write("**Related Articles:**")
