@@ -168,6 +168,13 @@ if user_input := st.chat_input(placeholder="Verify posts on politics, Leadership
                 st.session_state.credibility_score = credibility_score
 
 # Add buttons to display various information
+
+if st.button("Generate_response"):
+    if 'response' in st.session_state:
+        st.write(f"**Response:** {st.session_state.response}")
+    else:
+        st.warning("Please generate a response first.")
+
 if st.button("Context Fact Index"):
     if 'similarity_score' in st.session_state:
         st.write(f"**Context Fact Index:** {round(st.session_state.similarity_score * 100, 2)}%")
