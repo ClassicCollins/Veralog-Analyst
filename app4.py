@@ -170,6 +170,7 @@ if user_input := st.chat_input(placeholder="Verify posts on politics, Leadership
 # Add buttons to display various information
 
 if st.button("Generate Insight"):
+    # Ensure that the response is stored in session state and can be accessed here
     if 'generated_response' in st.session_state:
         st.write(f"**Response:** {st.session_state.generated_response}")
     else:
