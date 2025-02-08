@@ -148,3 +148,4 @@ webencodings==0.5.1
 wrapt==1.17.0
 yarl==1.17.2
 crewai[tools]
+chromadb==0.1.5
