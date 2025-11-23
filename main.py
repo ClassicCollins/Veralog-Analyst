@@ -113,7 +113,7 @@ class ChatBot:
             docs = self.retriever.get_relevant_documents(question)
             # Limit to top_k if retriever returns many
             docs = docs[:top_k]
-            context_text = "
+            context_text = ""
 
 ".join(d.page_content.strip() for d in docs if getattr(d, "page_content", "").strip())
             return context_text
