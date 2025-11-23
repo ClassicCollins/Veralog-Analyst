@@ -12,6 +12,7 @@ import streamlit as st
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from textwrap import shorten
+from main import ChatBot
 
 # Import ChatBot from the same file (if split, replace with: from main import ChatBot)
 # If you keep the files separate, change the import accordingly.
