@@ -1,91 +1,113 @@
 import os
-import pinecone
+import fitz  # PyMuPDF
 from dotenv import load_dotenv
 from pinecone import Pinecone, ServerlessSpec
-from langchain.vectorstores import Pinecone as LangchainPinecone
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from pinecone import Pinecone, ServerlessSpec
-from langchain.vectorstores import Pinecone as LangchainPinecone
-import fitz  # PyMuPDF for extracting text from PDF files
 
-# Load environment variables
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.embeddings import HuggingFaceEmbeddings
+
+# ------------------------------------------------------
+# LOAD ENVIRONMENT VARIABLES
+# ------------------------------------------------------
 load_dotenv()
 
-# Initialize Pinecone
-pc = pinecone.Pinecone(api_key=os.getenv("PINECONE_API_KEY"), environment='us-east1-aws')
-index = pc.Index("health")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+PINECONE_INDEX_NAME = "health"
+PINECONE_ENV = "us-east-1"     # Your serverless region
+NAMESPACE = None               # Optional: set to a string
 
-# Initialize embeddings
-embeddings_model_name = "sentence-transformers/all-MiniLM-L6-v2"
-embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
+if not PINECONE_API_KEY:
+    raise ValueError("Missing PINECONE_API_KEY in environment.")
 
-# Set up text splitting
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+# ------------------------------------------------------
+# INITIALIZE PINECONE v2 CLIENT
+# ------------------------------------------------------
+pc = Pinecone(api_key=PINECONE_API_KEY)
 
-# Function to extract text from a PDF
+# Connect to existing index
+index = pc.Index(name=PINECONE_INDEX_NAME)
+print(f"Connected to Pinecone index: {PINECONE_INDEX_NAME}")
+
+# ------------------------------------------------------
+# EMBEDDING MODEL
+# ------------------------------------------------------
+embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
+# ------------------------------------------------------
+# TEXT SPLITTER
+# ------------------------------------------------------
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=1000,
+    chunk_overlap=200
+)
+
+# ------------------------------------------------------
+# PDF TEXT EXTRACTION
+# ------------------------------------------------------
 def extract_text_from_pdf(pdf_path):
-    """
-    Extracts text from a given PDF file using PyMuPDF.
-    """
-    pdf_document = fitz.open(pdf_path)
-    text = ''
-    for page in range(pdf_document.page_count):
-        text += pdf_document.load_page(page).get_text()
-    pdf_document.close()
-    return text
+    """Extracts text from a PDF using PyMuPDF."""
+    doc = fitz.open(pdf_path)
+    output = ""
+    for page in doc:
+        output += page.get_text()
+    doc.close()
+    return output
 
-
-# Function to ingest a document
+# ------------------------------------------------------
+# DOCUMENT INGESTION
+# ------------------------------------------------------
 def ingest_document(document_path):
     """
-    Handles ingestion of a document by extracting text, splitting it, embedding chunks, 
-    and upserting into Pinecone.
+    Extracts text, splits into chunks, embeds, and upserts into Pinecone.
     """
-    # Determine the type of document
-    if document_path.endswith('.pdf'):
-        # Extract text from PDF
+    print(f"Processing: {document_path}")
+
+    # Extract text depending on file type
+    if document_path.lower().endswith(".pdf"):
         text = extract_text_from_pdf(document_path)
     else:
-        # For other formats, simply read the text
-        with open(document_path, 'r') as file:
-            text = file.read()
+        with open(document_path, "r", encoding="utf-8") as f:
+            text = f.read()
 
-    # Split the document into chunks
-    texts = text_splitter.split_text(text)
+    # Split into chunks
+    chunks = text_splitter.split_text(text)
+    print(f"- Created {len(chunks)} text chunks")
 
-    # Prepare embeddings and upsert with metadata into Pinecone index
-    upsert_data = []
-    for i, text_chunk in enumerate(texts):
-        unique_id = f"{os.path.basename(document_path)}_{i}"  # Create a unique ID for each chunk
-        vector = embeddings.embed_query(text_chunk)  # Generate the embedding for each chunk
-        # Append embedding and metadata to the upsert list
-        upsert_data.append({
-            "id": unique_id,
+    # Embed chunks
+    vectors = embeddings.embed_documents(chunks)
+
+    # Prepare upserts
+    upserts = []
+    file_id = os.path.basename(document_path)
+
+    for i, (chunk, vector) in enumerate(zip(chunks, vectors)):
+        upserts.append({
+            "id": f"{file_id}_{i}",
             "values": vector,
-            "metadata": {"text": text_chunk}  # Map the chunk's content as metadata
+            "metadata": {"text": chunk, "source": file_id}
         })
 
-    # Upload all the embeddings and metadata at once
-    index.upsert(upsert_data)
-    print(f"Successfully upserted {len(upsert_data)} chunks into Pinecone.")
-
-   
+    # Upsert to Pinecone
+    index.upsert(vectors=upserts, namespace=NAMESPACE)
+    print(f"✓ Upserted {len(upserts)} vectors into Pinecone.\n")
 
 
+# ------------------------------------------------------
+# BATCH INGESTION
+# ------------------------------------------------------
 if __name__ == "__main__":
-    # Directory containing documents
-    directory_path = "document"  # Path to the directory containing files
+    directory = "document"
 
-    # Iterate through all files in the directory
-    for filename in os.listdir(directory_path):
-        file_path = os.path.join(directory_path, filename)
+    if not os.path.exists(directory):
+        raise FileNotFoundError(f"Directory '{directory}' not found.")
 
-        # Ensure it's a file and not a subdirectory
+    for filename in os.listdir(directory):
+        file_path = os.path.join(directory, filename)
+
         if os.path.isfile(file_path):
             try:
-                # Ingest the document
                 ingest_document(file_path)
-                print(f"Document '{filename}' ingested successfully.")
             except Exception as e:
-                print(f"Error ingesting '{filename}': {e}")
+                print(f"❌ Error ingesting {filename}: {e}")
+        else:
+            print(f"Skipping directory: {filename}")
