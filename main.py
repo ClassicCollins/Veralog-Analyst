@@ -113,9 +113,7 @@ class ChatBot:
             docs = self.retriever.get_relevant_documents(question)
             # Limit to top_k if retriever returns many
             docs = docs[:top_k]
-            context_text = ""
-
-".join(d.page_content.strip() for d in docs if getattr(d, "page_content", "").strip())
+            context_text = "".join(d.page_content.strip() for d in docs if getattr(d, "page_content", "").strip())
             return context_text
         except Exception as e:
             logging.exception(f"retrieve_context error: {e}")
