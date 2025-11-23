@@ -87,10 +87,17 @@ class ChatBot:
 
         # Prompt template (kept concise for LLM)
         self.prompt_template = (
-            "You are a political scholar who adheres strictly to factual information from reliable sources.\\n"
-            "Assess whether the user's post is VERIFIED or UNVERIFIED based only on the context below.\\n"
-            "If insufficient information, reply: 'Please be informed I am limited to the content in my database. Kindly check back for an update.'\\n\n"
-            "Context:\n{context}\n\nQuestion: {question}\n\nAnswer:\n"
+            "You are a political scholar who adheres strictly to factual information from reliable sources.\n"
+            "Assess whether the user's post is VERIFIED or UNVERIFIED based only on the context below.\n"
+            "If insufficient information, reply: 'Please be informed I am limited to the content in my database. Kindly check back for an update.'\n
+"
+            "Context:
+{context}
+
+Question: {question}
+
+Answer:
+"
         )
 
         # Simple LRU cache for recent queries (helps reduce duplicate LLM calls)
@@ -107,7 +114,9 @@ class ChatBot:
             docs = self.retriever.get_relevant_documents(question)
             # Limit to top_k if retriever returns many
             docs = docs[:top_k]
-            context_text = "\n\n".join(d.page_content.strip() for d in docs if getattr(d, "page_content", "").strip())
+            context_text = "
+
+".join(d.page_content.strip() for d in docs if getattr(d, "page_content", "").strip())
             return context_text
         except Exception as e:
             logging.exception(f"retrieve_context error: {e}")
@@ -120,19 +129,15 @@ class ChatBot:
         if not self.hf_client:
             raise RuntimeError("HuggingFace Inference client not available. Set HUG_TOKEN_1.")
 
-        # The InferenceClient returns different shapes depending on model settings; use text_generation helper.
         try:
-            # Use text_generation for streaming-friendly text output (works with many HF models)
             response = self.hf_client.text_generation(
                 prompt,
                 max_new_tokens=max_new_tokens,
                 temperature=temperature,
             )
 
-            # response may be a str or dict/list depending on version, normalize to str
             if isinstance(response, str):
                 return response
-            # If response is a list/dict with 'generated_text' or 'content', extract
             if isinstance(response, list) and len(response) > 0:
                 first = response[0]
                 if isinstance(first, dict):
@@ -156,18 +161,15 @@ class ChatBot:
             context = self.retrieve_context(question)
 
             if not context.strip():
-                # graceful fallback when no context is found in DB
                 return "Please be informed I am limited to the content in my database. Kindly check back for an update."
 
             full_prompt = self.prompt_template.format(context=context, question=question)
 
-            # Call the LLM, using the cached wrapper
             if use_cache:
                 result = self._ask_cache(full_prompt)
             else:
                 result = self._call_llm(full_prompt)
 
-            # Normalise the output
             if isinstance(result, str):
                 return result.strip()
 
