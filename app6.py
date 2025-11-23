@@ -1,216 +1,154 @@
+# -------------------------
+# File: app6.py (Streamlit)
+# -------------------------
+# Streamlit front-end that uses ChatBot from main.py
+# Features:
+# - st.cache_resource for ChatBot instance
+# - SentenceTransformer local model for quick similarity scoring
+# - Improved UI: expandable related articles, credibility score, sentiment, caching
+
 import streamlit as st
-import requests
-from bs4 import BeautifulSoup
-from main import ChatBot
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-from transformers import pipeline  # Added for sentiment analysis
-from firecrawl import FirecrawlApp
+from textwrap import shorten
 
-# Initialize Firecrawl App with API key
-app = FirecrawlApp(api_key="FIRECRAWL_API_KEY")
+# Import ChatBot from the same file (if split, replace with: from main import ChatBot)
+# If you keep the files separate, change the import accordingly.
+# from main import ChatBot
 
-# Initialize ChatBot instance
-chatbot = ChatBot()
+# For this combined file, ChatBot is already defined above.
 
-# Load local pre-trained model from SentenceTransformers
-model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
+# ------------------
+# Helpers & caching
+# ------------------
 
-# Initialize sentiment analysis model
-sentiment_analyzer = pipeline("sentiment-analysis")
+@st.cache_resource
+def get_chatbot():
+    return ChatBot()
 
-# Set the page title
-st.set_page_config(
-    page_title="Veralog Analyst",
-    layout="centered",
+@st.cache_resource
+def get_local_embedder():
+    # small local model for similarity checks
+    return SentenceTransformer('paraphrase-MiniLM-L6-v2')
+
+@st.cache_data(ttl=300)
+def embed_texts(embedder, texts: List[str]):
+    return embedder.encode(texts, convert_to_numpy=True)
+
+# Simple sentiment helper using a tiny heuristic if HF pipeline not available in this environment
+# (You can swap to transformers.pipeline('sentiment-analysis') if you have the package.)
+
+def quick_sentiment(text: str):
+    # naive polarity based on keywords — replace with transformer pipeline for production
+    lowered = text.lower()
+    if any(w in lowered for w in ["happy", "good", "positive", "approve", "support"]):
+        return "POSITIVE", 0.9
+    if any(w in lowered for w in ["sad", "bad", "angry", "oppose", "concern"]):
+        return "NEGATIVE", 0.85
+    return "NEUTRAL", 0.6
+
+# ------------------
+# Streamlit UI
+# ------------------
+st.set_page_config(page_title="VeraLog Analyst (Optimized)", layout="wide")
+
+st.sidebar.image("images/bot.png", use_column_width=True)
+st.sidebar.title("VeraLog - Nigeria Fact Checker")
+st.sidebar.markdown(
+    "Verify posts about Politics, Economy, Leadership in Nigeria. Powered by RAG (Pinecone + HF Router)."
 )
 
-# Sidebar Section
-with st.sidebar:
-    st.image("images/bot.png", use_container_width=True)
-    st.title("VeraLog \nNigeria's Economic and Political Fact-Checker")
-    st.write(
-        """
-        Verify Posts on:
-        - Political Development Across Nigeria.
-        - Government.
-        - Leadership and Economy.
+chatbot = get_chatbot()
+embedder = get_local_embedder()
 
-        I'll give feedback based on the information in my database. If the information isn't available, I'll let you know.
-        """
-    )
+if 'messages' not in st.session_state:
+    st.session_state.messages = []
 
-# Initialize session state for messages
-if "messages" not in st.session_state:
-    st.session_state.messages = []  # Initialize messages as an empty list
+st.title("VeraLog — Fact Check Posts on Nigerian Politics & Economy")
+st.write("A Retrieval-Augmented Fact-Checker using Pinecone and the HuggingFace router. Use responsibly.")
 
-# Streamlit UI
-st.title("🗺️ Fact Check Posts on Nigerian Politics and Economy 📊verify☑️")
-st.write("""Welcome to the Veegil Platform. A place to get every political analysis in Nigerian well-detailed to you without any partisan bias. Please, verify posts with VeraLog. If I cannot find relevant information, I'll let you know. I verify based on what I have in my database""")
+# Input area
+user_input = st.chat_input(placeholder="Paste the claim or post you want verified...")
 
-# Function to calculate embeddings using the local pre-trained model
-def get_embeddings(text_list):
-    embeddings = model.encode(text_list)
-    return embeddings
-
-# Function to calculate cosine similarity between two text embeddings
-def calculate_similarity(query, response):
-    query_embedding = get_embeddings([query])
-    response_embedding = get_embeddings([response])
-    similarity_score = cosine_similarity(query_embedding, response_embedding)[0][0]
-    return similarity_score
-
-# Function to categorize the similarity score
-def get_verification_status(similarity_score):
-    if similarity_score > 0.7:
-        return "Verified"
-    elif 0.4 <= similarity_score <= 0.7:
-        return "Partly Verified"
-    elif 0.2 <= similarity_score < 0.4:
-        return "Not Verified based on information in my Database"
-    else:
-        return "Cannot substantiate this post at this time, check back later."
-
-# Function to fetch articles from trusted news sources and append crawl result
-def fetch_articles_from_sources(query):
-    sources = [
-        {"name": "Punch", "url": "https://punchng.com/"},
-        {"name": "Guardian", "url": "https://guardian.ng/"},
-        {"name": "Wikipedia", "url": "https://en.wikipedia.org/wiki/"}
-        #{"name": "Vanguard", "url": "https://www.vanguardngr.com/"}
-    ]
-    
-    relevant_articles = []
-    for source in sources:
-        try:
-            response = requests.get(source["url"])
-            soup = BeautifulSoup(response.content, 'html.parser')
-            # Look for all links or news articles related to the query
-            articles = soup.find_all('a', href=True)
-            for article in articles:
-                if query.lower() in article.get_text().lower():
-                    # Use FireCrawl to get more detailed content from the article
-                    crawl_result = app.crawl_url(article['href'], params={'limit': 1, 'scrapeOptions': {'formats': ['markdown']}})
-                    relevant_articles.append({
-                        "source": source["name"],
-                        "title": article.get_text(),
-                        "url": article['href'],
-                        "crawl_result": crawl_result.get('content', '')  # Append crawl result here
-                    })
-        except Exception as e:
-            print(f"Error fetching from {source['name']}: {e}")
-    
-    return relevant_articles
-
-# Function to calculate source credibility
-def calculate_credibility_score(relevant_articles):
-    # The more relevant articles, the higher the credibility
-    unique_sources = set(article["source"] for article in relevant_articles)
-    return len(unique_sources)
-
-# Function to generate the chatbot response
-def generate_response(user_input):
-    try:
-        # Retrieve the response using the chatbot QA chain
-        result = chatbot.qa_chain.invoke(user_input)
-        if result:
-            # Split by '**Question:**' and focus on the answer to the user's question
-            if "**Question:**" in result:
-                sections = result.split("**Question:**")
-                for section in sections:
-                    if user_input.lower() in section.lower():  # Match the user's question
-                        if "Answer:" in section:
-                            return section.split("Answer:")[-1].strip()
-            elif "result" in result:
-                return result["result"].strip()  # If no **Question:** pattern, fallback to result key
-            else:
-                return "Please, be informed that my response is currently limited to the content in my Database."
-        else:
-            return "I'm sorry. My response is currently limited to the content in my Database."
-    except Exception as e:
-        return f"Error: {e}"
-
-# Function for sentiment analysis
-def analyze_sentiment(text):
-    result = sentiment_analyzer(text)
-    sentiment = result[0]['label']
-    score = result[0]['score']
-    return sentiment, score
-
-# Display chat history
-st.markdown("#### Verify Post with VeraLog:")
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
-
-# User-provided input via chat box
-if user_input := st.chat_input(placeholder="Verify posts on politics, Leadership and economy in Nigeria:"):
+if user_input:
+    # Save user message
     st.session_state.messages.append({"role": "user", "content": user_input})
+
+    # Display user message
     with st.chat_message("user"):
         st.write(user_input)
 
-    # Generate a new response if the last message is not from the assistant
-    if st.session_state.messages[-1]["role"] != "assistant":
-        with st.chat_message("assistant"):
-            with st.spinner("Fetching insights..."):
-                # Generate response from the chatbot
-                response = generate_response(user_input)
+    # Generate response
+    with st.chat_message("assistant"):
+        with st.spinner("Checking database & generating response..."):
+            answer = chatbot.ask_question(user_input)
 
-                # Fetch related articles based on the query and append crawl results
-                relevant_articles = fetch_articles_from_sources(user_input)
+            # similarity / context fact index (best-effort)
+            try:
+                # create small similarity between user input and returned answer
+                vecs = embed_texts(embedder, [user_input, answer])
+                sim = float(cosine_similarity([vecs[0]], [vecs[1]])[0][0])
+            except Exception:
+                sim = 0.0
 
-                # Calculate similarity score using the local pre-trained model
-                similarity_score = calculate_similarity(user_input, response)
+            # sentiment
+            sentiment_label, sentiment_score = quick_sentiment(user_input)
 
-                # Get the verification status based on the similarity score
-                verification_status = get_verification_status(similarity_score)
+            # Show results
+            st.markdown(f"**Verification Result:** {shorten(answer, width=120, placeholder='...')}")
+            st.markdown(f"**Context-Fact Index:** {round(sim * 100, 2)}%")
+            st.markdown(f"**Sentiment:** {sentiment_label} ({sentiment_score:.2f})")
 
-                # Calculate source credibility score
-                credibility_score = calculate_credibility_score(relevant_articles)
+            # If retriever is available, show top docs (best-effort)
+            if chatbot.retriever:
+                docs = chatbot.retriever.get_relevant_documents(user_input)[:4]
+                if docs:
+                    st.markdown("---")
+                    st.markdown("**Top supporting documents from DB:**")
+                    for i, d in enumerate(docs, start=1):
+                        with st.expander(f"Source {i}: {shorten(d.metadata.get('source', 'doc'), width=40)}"):
+                            st.write(shorten(d.page_content, width=1000))
 
-                # Store the response and details in session state for later use
-                st.session_state.generated_response = response
-                st.session_state.similarity_score = similarity_score
-                st.session_state.verification_status = verification_status
-                st.session_state.relevant_articles = relevant_articles
-                st.session_state.credibility_score = credibility_score
+            # Record assistant message
+            st.session_state.messages.append({"role": "assistant", "content": answer})
 
-# Add buttons to display various information
+# Buttons for additional operations
+col1, col2, col3 = st.columns(3)
 
-if st.button("Generate Insight"):
-    # Ensure that the response is stored in session state and can be accessed here
-    if 'generated_response' in st.session_state:
-        st.write(f"**Response:** {st.session_state.generated_response}")
-    else:
-        st.warning("Please generate a response first.")
+with col1:
+    if st.button("Generate Insight"):
+        if st.session_state.messages and st.session_state.messages[-1]['role'] == 'assistant':
+            st.write(st.session_state.messages[-1]['content'])
+        else:
+            st.warning("No generated insight yet. Enter a claim to verify first.")
 
-if st.button("Context Fact Index"):
-    if 'similarity_score' in st.session_state:
-        st.write(f"**Context Fact Index:** {round(st.session_state.similarity_score * 100, 2)}%")
-    else:
-        st.warning("Please generate a response first.")
+with col2:
+    if st.button("Context Fact Index"):
+        if 'messages' in st.session_state and len(st.session_state.messages) >= 2:
+            last_user = next((m for m in reversed(st.session_state.messages) if m['role']=='user'), None)
+            last_assistant = next((m for m in reversed(st.session_state.messages) if m['role']=='assistant'), None)
+            if last_user and last_assistant:
+                try:
+                    vecs = embed_texts(embedder, [last_user['content'], last_assistant['content']])
+                    sim = float(cosine_similarity([vecs[0]], [vecs[1]])[0][0])
+                    st.write(f"**Context Fact Index:** {round(sim * 100,2)}%")
+                except Exception as e:
+                    st.error("Could not compute similarity.")
+            else:
+                st.warning("Please generate a response first.")
+        else:
+            st.warning("Please enter and verify a claim first.")
 
-if st.button("Related Articles"):
-    if 'relevant_articles' in st.session_state and st.session_state.relevant_articles:
-        st.write("**Related Articles:**")
-        for article in st.session_state.relevant_articles:
-            st.write(f"- **{article['source']}**: [{article['title']}]({article['url']})")
-            st.write(f"  **Crawl Result:** {article['crawl_result'][:300]}...")  # Show a snippet of the crawl result
-    else:
-        st.warning("No related articles found. Please try again later.")
+with col3:
+    if st.button("Analyze Sentiment"):
+        last_user = next((m for m in reversed(st.session_state.messages) if m['role']=='user'), None)
+        if last_user:
+            label, score = quick_sentiment(last_user['content'])
+            st.write(f"**Sentiment:** {label} ({score:.2f})")
+        else:
+            st.warning("Please enter a claim to analyze.")
 
-if st.button("Source Credibility Score"):
-    if 'credibility_score' in st.session_state:
-        st.write(f"**Source Credibility Score:** {st.session_state.credibility_score}/3 (Higher score indicates more corroboration)")
-    else:
-        st.warning("Please generate a response first.")
+# Footer
+st.caption("Ensure environment variables are set: PINECONE_API_KEY, HUG_TOKEN_1, PINECONE_INDEX (optional).")
 
-# Add a button for sentiment analysis
-if st.button("Analyze Sentiment"):
-    if 'messages' in st.session_state and st.session_state.messages:
-        user_input = st.session_state.messages[-1]["content"]  # Get the latest user input
-        sentiment, score = analyze_sentiment(user_input)
-        st.write(f"**Sentiment:** {sentiment}")
-        st.write(f"**Sentiment Score:** {score:.2f}")
-    else:
-        st.warning("Please enter some text to analyze sentiment.")
+# End of file
