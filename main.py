@@ -1,93 +1,75 @@
+# -------------------------
+# File: main.py
+# -------------------------
+# ChatBot class: RAG pipeline using Pinecone + Hugging Face Router (InferenceClient)
+# - Uses huggingface_hub InferenceClient (router.huggingface.co)
+# - Uses langchain_huggingface embeddings for Pinecone
+# - Robust error handling and simple in-memory caching for recent queries
+
+
 import os
+import time
+import logging
+from functools import lru_cache
+from typing import List
+
+
 import pinecone
 from dotenv import load_dotenv
-from langchain_community.vectorstores import Pinecone
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
 from huggingface_hub import InferenceClient
 
-# Load environment variables
+
+from langchain_community.vectorstores import Pinecone as LC_Pinecone
+from langchain_huggingface import HuggingFaceEmbeddings
+
+
+# Optional: reduce noisy logs
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+
 load_dotenv()
 
 
+# Basic configuration
+PINECONE_INDEX = os.getenv("PINECONE_INDEX", "health")
+PINECONE_ENV = os.getenv("PINECONE_ENV", "us-east1-aws")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+HUGGINGFACE_TOKEN = os.getenv("HUG_TOKEN_1")
+HF_RAG_MODEL = os.getenv("HF_RAG_MODEL", "mistralai/Mistral-7B-Instruct-v0.2")
+
+
+# Initialize Pinecone client on import (safe no-op if keys missing)
+if PINECONE_API_KEY:
+try:
+pinecone_client = pinecone.Pinecone(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
+except Exception as e:
+pinecone_client = None
+logging.warning(f"Pinecone init failed: {e}")
+else:
+pinecone_client = None
+logging.warning("PINECONE_API_KEY not found in environment; vector DB disabled.")
+
+
+
+
 class ChatBot:
-    def __init__(self):
-        # Initialize Pinecone
-        pc = pinecone.Pinecone(
-            api_key=os.getenv("PINECONE_API_KEY"),
-            environment="us-east1-aws"
-        )
-        index_name = "health"
-
-        # Embeddings
-        embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2"
-        )
-
-        # Vectorstore
-        self.docsearch = Pinecone.from_existing_index(
-            index_name=index_name,
-            embedding=embeddings
-        )
-
-        self.retriever = self.docsearch.as_retriever()
-
-        # DIRECT HuggingFace Router client (NEW)
-        self.client = InferenceClient(
-            model="mistralai/Mistral-7B-Instruct-v0.2",
-            token=os.getenv("HUG_TOKEN_1")
-        )
-
-        template = """
-        You are a political scholar who adheres strictly to factual information from reliable sources.
-        Assess whether the user's post is VERIFIED or UNVERIFIED based only on the context.
-
-        If you cannot verify, reply:
-        "Please be informed I am limited to the content in my database. Kindly check back for an update."
-
-        Context:
-        {context}
-
-        **Question:** {question}
-
-        Answer:
-        """
-
-        self.prompt = PromptTemplate(
-            template=template,
-            input_variables=["context", "question"]
-        )
-
-    def retrieve_context(self, question):
-        """Retrieve relevant documents."""
-        try:
-            docs = self.retriever.get_relevant_documents(question)
-            context_text = " ".join([doc.page_content for doc in docs])
-            return context_text if context_text.strip() else "No relevant information found."
-        except:
-            return "No relevant information found."
-
-    def ask_question(self, question):
-        """Send prompt to HuggingFace using the NEW router."""
-        try:
-            context = self.retrieve_context(question)
-            full_prompt = self.prompt.format(context=context, question=question)
-
-            # NEW API CALL → This uses router.huggingface.co automatically
-            response = self.client.text_generation(
-                full_prompt,
-                max_new_tokens=200,
-                temperature=0.6
-            )
-
-            return response
-
-        except Exception as e:
-            return f"Error contacting HuggingFace router: {e}"
+def __init__(self, index_name: str = PINECONE_INDEX, hf_model: str = HF_RAG_MODEL, hf_token: str = HUGGINGFACE_TOKEN):
+# Load and validate environment variables
+self.index_name = index_name
+self.hf_model = hf_model
+self.hf_token = hf_token
 
 
-if __name__ == "__main__":
-    bot = ChatBot()
-    output = bot.ask_question("What is the role of the CBN governor?")
-    print(output)
+# Embeddings for Pinecone (used by LangChain interface)
+try:
+self.embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+except Exception as e:
+self.embeddings = None
+logging.warning(f"Failed to initialize HuggingFaceEmbeddings: {e}")
+
+
+# Connect to Pinecone/LangChain vectorstore if Pinecone is ready
+if pinecone_client and self.embeddings:
+try:
+self.docsearch = LC_Pinecone.from_existing_index(index_name=self.index_name, embedding=self.embeddings)
+return "An internal error occurred. Please try again later."
