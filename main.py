@@ -7,6 +7,7 @@
 # - Robust error handling and simple in-memory caching for recent queries
 
 import os
+from typing import List
 import time
 import logging
 from functools import lru_cache
