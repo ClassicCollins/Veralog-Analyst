@@ -87,10 +87,17 @@ class ChatBot:
 
         # Prompt template (kept concise for LLM)
         self.prompt_template = (
-            "You are a political scholar who adheres strictly to factual information from reliable sources.\n"
-            "Assess whether the user's post is VERIFIED or UNVERIFIED based only on the context below.\n"
-            "If insufficient information, reply: 'Please be informed I am limited to the content in my database. Kindly check back for an update.'\n"
-            "Context: {context} Question: {question} Answer:")
+        "You are a political scholar who relies strictly on verifiable, evidence-based information from credible sources.\n"
+        "Evaluate the user's post using ONLY the context provided.\n"
+        "Your task is to determine whether the claim is VERIFIED or UNVERIFIED.\n"
+        "If the context does not contain enough evidence to reach a conclusion, respond with:\n"
+        "'Please be informed I am limited to the content in my database. Kindly check back for an update.'\n\n"
+        "Context:\n{context}\n\n"
+        "Claim:\n{question}\n\n"
+        "Answer:"
+    )
+
+       
 
         # Simple LRU cache for recent queries (helps reduce duplicate LLM calls)
         self._ask_cache = lru_cache(maxsize=128)(self._call_llm)
