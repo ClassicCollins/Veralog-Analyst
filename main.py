@@ -12,7 +12,7 @@ from typing import List
 import time
 import logging
 from functools import lru_cache
-from typing import from typing import List
+from typing import List
 
 List
 
