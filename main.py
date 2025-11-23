@@ -1,146 +1,135 @@
-# -------------------------
-# File: main.py  (Pinecone v1 Compatible)
-# -------------------------
-
 import os
 import logging
-from functools import lru_cache
-from dotenv import load_dotenv
+from typing import List, Dict, Any
 
-import pinecone
-from huggingface_hub import InferenceClient
-from langchain_community.vectorstores import Pinecone as LC_Pinecone
-from langchain_huggingface import HuggingFaceEmbeddings
+import pinecone                     # Pinecone v2 client
+from sentence_transformers import SentenceTransformer, util
 
-load_dotenv()
+# ------------------------------------------------------------
+# Logging
+# ------------------------------------------------------------
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# -------------------------
-# ENV CONFIG
-# -------------------------
+# ------------------------------------------------------------
+# Load Embedding Models
+# ------------------------------------------------------------
+try:
+    embed_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+    rerank_model = SentenceTransformer("paraphrase-MiniLM-L6-v2")
+except Exception as e:
+    logger.error(f"Failed loading embedding models: {e}")
+    raise
+
+# ------------------------------------------------------------
+# Pinecone v2 Initialization
+# ------------------------------------------------------------
+pc = None
+pc_index = None
+
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-PINECONE_ENV = os.getenv("PINECONE_ENV")
-PINECONE_INDEX = os.getenv("PINECONE_INDEX", "health")
+PINECONE_INDEX = os.getenv("PINECONE_INDEX_NAME", "health")
+PINECONE_ENV = os.getenv("PINECONE_ENVIRONMENT")  # region like "us-east-1"
+NAMESPACE = os.getenv("PINECONE_NAMESPACE", None)
 
-HUGGINGFACE_TOKEN = os.getenv("HUG_TOKEN_1")
-HF_RAG_MODEL = os.getenv("HF_RAG_MODEL", "mistralai/Mistral-7B-Instruct-v0.2")
-
-EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-
-# -------------------------
-# INIT PINECONE v1
-# -------------------------
-pinecone_ready = False
-if PINECONE_API_KEY and PINECONE_ENV:
-    try:
-        pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
-        pinecone_index_obj = pinecone.Index(PINECONE_INDEX)
-        pinecone_ready = True
-        logging.info("Connected to Pinecone v1 index successfully.")
-    except Exception as e:
-        pinecone_index_obj = None
-        logging.warning(f"Failed to connect to Pinecone v1: {e}")
+if not PINECONE_API_KEY or not PINECONE_ENV:
+    logger.warning("Pinecone environment variables missing.")
 else:
-    pinecone_index_obj = None
-    logging.warning("Pinecone environment variables missing.")
+    try:
+        logger.info("Initializing Pinecone (v2)...")
+        pc = pinecone.Pinecone(api_key=PINECONE_API_KEY)
+
+        # v2 correct index connection
+        pc_index = pc.Index(PINECONE_INDEX)
+
+        # test
+        stats = pc_index.describe_index_stats()
+        logger.info(f"Pinecone connected. Stats: {stats}")
+
+    except Exception as e:
+        logger.error(f"Failed to connect to Pinecone: {e}")
+        pc_index = None
 
 
-class ChatBot:
-    def __init__(self):
+# ------------------------------------------------------------
+# Embedding Function
+# ------------------------------------------------------------
+def embed_text(text: str):
+    return embed_model.encode(text).tolist()
 
-        # Embeddings model
-        try:
-            self.embeddings = HuggingFaceEmbeddings(model_name=EMBED_MODEL)
-        except Exception as e:
-            logging.warning(f"Embedding init failed: {e}")
-            self.embeddings = None
 
-        # LangChain retriever
-        if pinecone_ready and self.embeddings:
-            try:
-                self.docsearch = LC_Pinecone.from_existing_index(
-                    index_name=PINECONE_INDEX,
-                    embedding=self.embeddings
-                )
-                self.retriever = self.docsearch.as_retriever()
-                logging.info("Retriever connected.")
-            except Exception as e:
-                logging.warning(f"Retriever init failed: {e}")
-                self.retriever = None
-        else:
-            self.retriever = None
+# ------------------------------------------------------------
+# RAG Retrieval
+# ------------------------------------------------------------
+def retrieve_documents(query: str, top_k: int = 3) -> List[Dict[str, Any]]:
+    """
+    Query Pinecone and return top_k results with metadata.
+    """
+    if not pc_index:
+        logger.warning("Pinecone index not available — retrieval skipped.")
+        return []
 
-        # HuggingFace LLM
-        if HUGGINGFACE_TOKEN:
-            try:
-                self.hf_client = InferenceClient(model=HF_RAG_MODEL, token=HUGGINGFACE_TOKEN)
-            except:
-                self.hf_client = None
-                logging.warning("Failed to initialize HF client.")
-        else:
-            self.hf_client = None
-            logging.warning("Missing HuggingFace token.")
+    try:
+        q_embed = embed_text(query)
 
-        # Prompt
-        self.prompt_template = (
-            "You are a political scholar who relies strictly on verifiable, evidence-based information.\n"
-            "Evaluate the user's post using ONLY the provided context.\n"
-            "If there is not enough evidence, respond exactly:\n"
-            "'Please be informed I am limited to the content in my database. Kindly check back for an update.'\n\n"
-            "Context:\n{context}\n\n"
-            "Claim:\n{question}\n\n"
-            "Answer:"
+        result = pc_index.query(
+            vector=q_embed,
+            top_k=top_k,
+            include_metadata=True,
+            namespace=NAMESPACE
         )
 
-        # Cache LLM calls
-        self._ask_cache = lru_cache(maxsize=128)(self._call_llm)
+        matches = result.get("matches", [])
+        docs = [
+            {
+                "id": m["id"],
+                "score": m["score"],
+                "text": m["metadata"].get("text", "")
+            }
+            for m in matches
+        ]
+        return docs
 
-    # ---------------------------------------------------------------
-    # RETRIEVE DOCUMENTS
-    # ---------------------------------------------------------------
-    def retrieve_context(self, query: str, top_k: int = 4) -> str:
-        if not self.retriever:
-            return ""
-
-        try:
-            docs = self.retriever.get_relevant_documents(query)
-            docs = docs[:top_k]
-            return "\n\n".join([d.page_content for d in docs])
-        except Exception as e:
-            logging.warning(f"Context retrieval error: {e}")
-            return ""
-
-    # ---------------------------------------------------------------
-    # LLM CALL
-    # ---------------------------------------------------------------
-    def _call_llm(self, prompt: str):
-        if not self.hf_client:
-            raise RuntimeError("HF client unavailable.")
-
-        try:
-            response = self.hf_client.text_generation(
-                prompt,
-                max_new_tokens=200,
-                temperature=0.5
-            )
-            return response if isinstance(response, str) else str(response)
-        except Exception as e:
-            logging.warning(f"LLM error: {e}")
-            return "Model error."
-
-    # ---------------------------------------------------------------
-    # PUBLIC METHOD
-    # ---------------------------------------------------------------
-    def ask_question(self, question: str) -> str:
-        context = self.retrieve_context(question)
-
-        if not context.strip():
-            return "Please be informed I am limited to the content in my database. Kindly check back for an update."
-
-        prompt = self.prompt_template.format(context=context, question=question)
-        return self._ask_cache(prompt).strip()
+    except Exception as e:
+        logger.error(f"Query failed: {e}")
+        return []
 
 
-if __name__ == "__main__":
-    bot = ChatBot()
-    print(bot.ask_question("Who is the Senate President of Nigeria?"))
+# ------------------------------------------------------------
+# Rerank
+# ------------------------------------------------------------
+def rerank_results(query: str, docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    if not docs:
+        return []
+
+    try:
+        q_vec = rerank_model.encode(query)
+
+        for doc in docs:
+            d_vec = rerank_model.encode(doc["text"])
+            score = float(util.cos_sim(q_vec, d_vec))
+            doc["rerank"] = score
+
+        return sorted(docs, key=lambda x: x["rerank"], reverse=True)
+
+    except Exception as e:
+        logger.error(f"Reranking failed: {e}")
+        return docs
+
+
+# ------------------------------------------------------------
+# Main Answer Function (used by Streamlit)
+# ------------------------------------------------------------
+def answer_query(query: str) -> str:
+    docs = retrieve_documents(query)
+
+    if not docs:
+        return (
+            "No relevant documents were found in the database.\n"
+            "Ensure your Pinecone index is populated."
+        )
+
+    ranked = rerank_results(query, docs)
+
+    best = ranked[0]
+    return f"Top result:\n\n{best['text']}\n\nScore: {best['rerank']}"
