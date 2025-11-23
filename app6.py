@@ -46,7 +46,7 @@ if "messages" not in st.session_state:
 
 # Streamlit UI
 st.title("🗺️ Fact Check Posts on Nigerian Politics and Economy 📊verify☑️")
-st.write("""Welcome to the Veegil Media Platform. A place to get every political analysis in Nigerian well-detailed to you without any partisan bias. Please, verify posts with VeraLog. If I cannot find relevant information, I'll let you know. I verify based on what I have in my database""")
+st.write("""Welcome to the Veegil Platform. A place to get every political analysis in Nigerian well-detailed to you without any partisan bias. Please, verify posts with VeraLog. If I cannot find relevant information, I'll let you know. I verify based on what I have in my database""")
 
 # Function to calculate embeddings using the local pre-trained model
 def get_embeddings(text_list):
@@ -76,7 +76,8 @@ def fetch_articles_from_sources(query):
     sources = [
         {"name": "Punch", "url": "https://punchng.com/"},
         {"name": "Guardian", "url": "https://guardian.ng/"},
-        {"name": "Vanguard", "url": "https://www.vanguardngr.com/"}
+        {"name": "Wikipedia", "url": "https://en.wikipedia.org/wiki/"}
+        #{"name": "Vanguard", "url": "https://www.vanguardngr.com/"}
     ]
     
     relevant_articles = []
