@@ -1,15 +1,14 @@
 import os
 import pinecone
 from dotenv import load_dotenv
-from langchain_community.vectorstores import Pinecone  # Updated import for Pinecone
-from langchain_community.embeddings import HuggingFaceEmbeddings  # Updated import for HuggingFaceEmbeddings
-from langchain_community.llms import HuggingFaceEndpoint  # Updated import for HuggingFaceEndpoint
+
+# Correct imports (use langchain_huggingface)
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEndpoint
+
+from langchain_community.vectorstores import Pinecone
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
-from langchain.chains.question_answering import load_qa_chain
-from langchain_huggingface import HuggingFaceEmbeddings  # Updated import for HuggingFaceEmbeddings
-from langchain_huggingface import HuggingFaceEndpoint  # Updated import for HuggingFaceEndpoint
-
 
 
 # Load environment variables
@@ -22,50 +21,60 @@ class ChatBot:
         load_dotenv()
 
         # Initialize Pinecone client
-        pc = pinecone.Pinecone(api_key=os.getenv("PINECONE_API_KEY"), environment='us-east1-aws')
+        pc = pinecone.Pinecone(
+            api_key=os.getenv("PINECONE_API_KEY"),
+            environment="us-east1-aws"
+        )
         index_name = "health"
 
         # Initialize embeddings
-        embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-        
+        embeddings = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2"
+        )
 
-        # Connect Langchain to Pinecone
+        # Connect LangChain to Pinecone index
         self.docsearch = Pinecone.from_existing_index(
             index_name=index_name,
             embedding=embeddings
         )
-        
-        # Set up retriever properly
-        self.retriever = self.docsearch.as_retriever()  # Use retriever interface
 
-        # Initialize HuggingFaceEndpoint LLM
-        #repo_id = "mistralai/Mixtral-8x7B-Instruct-v0.1"
-        repo_id="mistralai/Mistral-7B-Instruct-v0.2"
+        # Create retriever
+        self.retriever = self.docsearch.as_retriever()
+
+        # Initialize HuggingFace LLM using HuggingFace Router
+        repo_id = "mistralai/Mistral-7B-Instruct-v0.2"
+
         self.llm = HuggingFaceEndpoint(
             repo_id=repo_id,
+            temperature=0.6,
             top_k=40,
             top_p=0.8,
-            temperature=0.6,
-            max_new_tokens=150,
+            max_new_tokens=200,
             huggingfacehub_api_token=os.getenv("HUG_TOKEN_1")
         )
 
-        # Define prompt template
+        # Prompt
         template = """
-        You are a political scholar who adheres strictly to factual information from reliable sources. Humans will submit posts related to Politics, Economy, Leadership, and Government in Nigeria.
-        Your task is to assess and confirm whether their post is VERIFIED or UNVERIFIED based solely on the provided context. You must respond accurately and with respect.
-        If the provided context does not contain sufficient information to verify the post, reply with: "Please be informed I am limited to the content in my database. Kindly check back for an update."
-        Remember, you are required to communicate exclusively in English at all times.
-        
-        Context: {context}
+        You are a political scholar who adheres strictly to factual information from reliable sources.
+        Assess and confirm whether a user's post is VERIFIED or UNVERIFIED based solely on the provided context.
+
+        If context does not support an answer, reply:
+        "Please be informed I am limited to the content in my database. Kindly check back for an update."
+
+        Context:
+        {context}
 
         **Question:** {question}
 
         Answer:
         """
-        prompt = PromptTemplate(template=template, input_variables=["context", "question"])
 
-        # Set up the RetrievalQA chain
+        prompt = PromptTemplate(
+            template=template,
+            input_variables=["context", "question"]
+        )
+
+        # RetrievalQA chain
         self.qa_chain = RetrievalQA.from_chain_type(
             llm=self.llm,
             retriever=self.retriever,
@@ -73,44 +82,40 @@ class ChatBot:
         )
 
     def retrieve_context(self, question):
-        """
-        Custom retrieval logic: Only extract page content safely without metadata dependencies.
-        """
+        """Retrieve only the page_content safely."""
         try:
-            # Use retriever to fetch relevant documents
-            retriever_results = self.retriever.get_relevant_documents(question)
+            results = self.retriever.get_relevant_documents(question)
+            context_text = " ".join([doc.page_content for doc in results])
 
-            # Only focus on 'page_content' directly
-            context_text = " ".join([result.page_content for result in retriever_results])
-
-            # Handle case where no relevant content is found
-            if len(context_text.strip()) == 0:
-                return "I'm sorry. My response is currently limited to the content in my Database."
+            if not context_text.strip():
+                return "No relevant information found in the database."
 
             return context_text
+
         except Exception as e:
             print(f"Retrieval Error: {e}")
-            return "I'm sorry. My response is currently limited to the content in my Database."
+            return "No relevant information found in the database."
 
     def ask_question(self, question):
-        """
-        Safe invocation of the RetrievalQA chain while passing safe and filtered context data.
-        """
+        """Pass correct variables into the QA chain."""
         try:
-            # Fetch context safely without metadata assumptions
             context = self.retrieve_context(question)
-            response = self.qa_chain.run({"context": context, "query": question})
+
+            response = self.qa_chain.run({
+                "context": context,
+                "question": question
+            })
+
             return response
+
         except Exception as e:
             print(f"Error during question handling: {e}")
-            return "I'm sorry. My response is currently limited to the content in my Database."
+            return "Please be informed I am limited to the content in my database. Kindly check back for an update."
 
 
+# Test
 if __name__ == "__main__":
-    # Initialize chatbot
     chatbot = ChatBot()
-
-    # Ask a sample question
-    question = "Hello, what can you help me with"
+    question = "Hello, what can you help me with?"
     answer = chatbot.ask_question(question)
     print(f"Answer: {answer}")
