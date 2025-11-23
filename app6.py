@@ -7,6 +7,7 @@
 # - SentenceTransformer local model for quick similarity scoring
 # - Improved UI: expandable related articles, credibility score, sentiment, caching
 
+from typing import List
 import streamlit as st
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
