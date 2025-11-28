@@ -34,10 +34,10 @@ with st.sidebar:
 # ----------------------------
 # MAIN UI
 # ----------------------------
-st.title("🗳️ Veegil Fact Checker Assistant")
+st.title("🗳️ VeraLog")
 
 st.write(
-    "Enter a post or question. The fact-checker retrieves supporting evidence "
+    "Veegil Fact Checker Assistant. Enter a post or question. The fact-checker retrieves supporting evidence "
     "from our database and evaluates whether the claim is **verified** (score above 0.6) or **unverified** (Score below 0.6)"
 )
 
@@ -50,7 +50,7 @@ user_input = st.text_area(
     height=140,
 )
 
-submit = st.button("fact-check Claim")
+submit = st.button("Fact-Check Claim")
 
 # ----------------------------
 # PROCESS QUERY
@@ -92,7 +92,7 @@ if st.session_state.history:
         st.markdown(
             f"""
             **You:** {item['question']}  
-            **Assistant:** {item['answer']}  
+            **VeraLog:** {item['answer']}  
             <div style='font-size:12px;color:gray;'>({item['timestamp']})</div>
             ---
             """,
