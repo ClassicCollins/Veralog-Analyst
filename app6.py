@@ -1,5 +1,5 @@
 import streamlit as st
-from main import answer_query  # <-- Uses your working RAG pipeline
+from main import answer_query  
 from datetime import datetime
 
 # ----------------------------
@@ -22,35 +22,35 @@ if "history" not in st.session_state:
 # ----------------------------
 with st.sidebar:
     st.title("🔍 Veralog Fact Checker")
-    st.markdown("This tool checks whether political claims are *verified or unverified* based solely on your curated RAG dataset.")
+    st.markdown("This tool fact-checks whether claims are **verified or unverified**")
 
     if st.button("Clear Chat"):
         st.session_state.history = []
         st.success("Chat cleared.")
 
     st.markdown("---")
-    st.caption("Built with Pinecone v2 + Streamlit + OpenAI")
+    st.caption("Built with Veegil Technologies")
 
 # ----------------------------
 # MAIN UI
 # ----------------------------
-st.title("🗳️ Political Fact Checker Assistant")
+st.title("🗳️ Veegil Fact Checker Assistant")
 
 st.write(
-    "Enter a political claim or question. The assistant retrieves supporting evidence "
-    "from your Pinecone database and evaluates whether the claim is **verified** or **unverified**."
+    "Enter a post or question. The fact-checker retrieves supporting evidence "
+    "from our database and evaluates whether the claim is **verified** (score above 0.6) or **unverified** (Score below 0.6)"
 )
 
 # ----------------------------
 # USER INPUT
 # ----------------------------
 user_input = st.text_area(
-    "Enter your political claim or statement:",
-    placeholder="Example: 'The health budget increased by 25% in 2024'…",
+    "Enter your claim or statement:",
+    placeholder="Example: 'Federal Government’s allocation decreased by N41.44bn'…",
     height=140,
 )
 
-submit = st.button("Check Claim")
+submit = st.button("fact-check Claim")
 
 # ----------------------------
 # PROCESS QUERY
@@ -75,18 +75,18 @@ if submit and user_input.strip():
         })
 
         # Display immediate result
-        st.markdown("### ✅ Fact-Check Result")
+        st.markdown("### Fact-Check Result")
         st.write(response)
 
     else:
-        st.warning("No response generated. Check your Pinecone index or embeddings.")
+        st.warning("No response generated. Check index or embeddings.")
 
 # ----------------------------
 # SHOW CHAT HISTORY
 # ----------------------------
 if st.session_state.history:
     st.markdown("---")
-    st.markdown("### 🧠 Conversation History")
+    st.markdown("### Conversation History")
 
     for item in reversed(st.session_state.history):
         st.markdown(
