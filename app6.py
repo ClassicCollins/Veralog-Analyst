@@ -29,7 +29,7 @@ with st.sidebar:
         st.success("Chat cleared.")
 
     st.markdown("---")
-    st.caption("Built with Veegil Technologies")
+    st.caption("Built With Veegil Technologies")
 
 # ----------------------------
 # MAIN UI
