@@ -38,7 +38,7 @@ st.title("🗳️ VeraLog")
 
 st.write(
     "Veegil Fact Checker Assistant. Enter a post or question. The fact-checker retrieves supporting evidence "
-    "from our database and evaluates whether the claim is **verified** (score above 0.6) or **unverified** (Score below 0.6)"
+    "from our database and evaluates whether the claim is **verified** (score above 0.6 fact-index) or **unverified** (Score below 0.6 fact-index)"
 )
 
 # ----------------------------
